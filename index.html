@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Yucatán & Quintana Roo · Jul–Ago 2026</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; background: #0f172a; }
+
+    #sidebar { width: 390px; background: #0f172a; color: #e2e8f0; overflow-y: auto; display: flex; flex-direction: column; border-right: 1px solid #1e293b; }
+    #sidebar::-webkit-scrollbar { width: 4px; }
+    #sidebar::-webkit-scrollbar-track { background: #0f172a; }
+    #sidebar::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
+    #header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 14px 18px 10px; border-bottom: 1px solid #1e293b; }
+    #header h1 { font-size: 0.95rem; font-weight: 700; color: #f8fafc; }
+    #header .subtitle { font-size: 0.65rem; color: #64748b; margin-top: 2px; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid #1e293b; }
+    .stat-cell { padding: 8px 5px; text-align: center; border-right: 1px solid #1e293b; }
+    .stat-cell:last-child { border-right: none; }
+    .stat-num { font-size: 0.9rem; font-weight: 700; }
+    .stat-lbl { font-size: 0.52rem; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 1px; }
+
+    .region-header { padding: 7px 14px; font-size: 0.61rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.1px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; }
+
+    .base-card { padding: 10px 14px; border-bottom: 1px solid #1e293b; background: #0a0f1e; cursor: pointer; transition: background 0.15s; }
+    .base-card:hover { background: #0d1526; }
+    .base-name { font-size: 0.86rem; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; gap: 7px; }
+    .base-num { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.58rem; font-weight: 700; color: white; flex-shrink: 0; }
+    .base-hotel { font-size: 0.61rem; color: #64748b; margin-top: 3px; }
+    .base-dates { display: inline-block; font-size: 0.59rem; color: #94a3b8; background: #1e293b; padding: 1px 7px; border-radius: 10px; margin-top: 4px; }
+    .base-desc { font-size: 0.64rem; color: #94a3b8; margin-top: 6px; line-height: 1.5; }
+
+    .sleep-section { padding: 6px 14px 8px; background: #07091a; border-bottom: 1px solid #1e293b; }
+    .sleep-title { font-size: 0.52rem; color: #475569; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+    .sleep-item { font-size: 0.61rem; color: #64748b; padding: 2px 0; display: flex; gap: 7px; align-items: flex-start; line-height: 1.4; }
+    .sleep-dates { color: #475569; flex-shrink: 0; min-width: 120px; }
+    .sleep-where { color: #94a3b8; font-weight: 600; }
+
+    .hl-row { padding: 7px 14px; cursor: pointer; border-bottom: 1px solid #1e293b; transition: background 0.15s; display: flex; align-items: flex-start; gap: 8px; }
+    .hl-row:hover { background: #1a2438; }
+    .hl-row.active { background: #1e2f47; border-left: 3px solid; padding-left: 11px; }
+    .hl-num { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.58rem; font-weight: 700; color: white; flex-shrink: 0; margin-top: 1px; }
+    .hl-content { flex: 1; min-width: 0; }
+    .hl-name-text { font-size: 0.76rem; font-weight: 600; color: #f1f5f9; }
+    .hl-time-text { font-size: 0.58rem; color: #64748b; margin-top: 2px; }
+    .hl-note-text { font-size: 0.57rem; color: #8b5cf6; margin-top: 1px; font-style: italic; }
+
+    .badge { display: inline-block; font-size: 0.52rem; padding: 1px 5px; border-radius: 3px; margin-left: 3px; vertical-align: middle; }
+    .badge-inter { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+    .badge-night { background: rgba(139,92,246,0.12); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.25); }
+
+    .transit-row { padding: 6px 14px 6px 22px; display: flex; align-items: center; gap: 9px; background: #07091a; border-bottom: 1px solid #1e293b; }
+    .transit-line { width: 2px; height: 30px; flex-shrink: 0; border-radius: 1px; background: repeating-linear-gradient(to bottom, #475569 0, #475569 4px, transparent 4px, transparent 8px); }
+    .transit-info { font-size: 0.62rem; color: #475569; line-height: 1.55; flex: 1; }
+    .transit-info strong { color: #64748b; }
+
+    .section-label { padding: 6px 14px 4px; font-size: 0.52rem; color: #475569; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #1e293b; background: #0a0f1e; }
+
+    .timeline-section { padding: 10px 14px; border-bottom: 1px solid #1e293b; }
+    .tl-item { display: flex; gap: 8px; margin-bottom: 4px; font-size: 0.62rem; color: #94a3b8; line-height: 1.4; }
+    .tl-day { color: #475569; font-weight: 600; min-width: 48px; flex-shrink: 0; }
+    .tl-loc strong { color: #cbd5e1; }
+
+    .tips-section { padding: 8px 14px; }
+    .tip-item { font-size: 0.62rem; color: #94a3b8; line-height: 1.5; padding: 3px 0; border-bottom: 1px solid #1e293b; }
+    .tip-item:last-child { border-bottom: none; }
+
+    #map-wrap { flex: 1; position: relative; overflow: hidden; }
+    #map { width: 100%; height: 100%; }
+
+    #loading-overlay { position: absolute; inset: 0; z-index: 2000; background: rgba(9,13,26,0.85); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; backdrop-filter: blur(2px); transition: opacity 0.4s; }
+    #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+    .spinner { width: 28px; height: 28px; border: 3px solid #1e293b; border-top-color: #06b6d4; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 0.72rem; color: #94a3b8; }
+
+    #hl-box { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 1000; display: none; background: rgba(9,18,38,0.96); border: 1px solid #38bdf8; border-radius: 8px; padding: 8px 12px; font-size: 0.7rem; color: #e2e8f0; backdrop-filter: blur(8px); box-shadow: 0 4px 20px rgba(0,0,0,0.55); align-items: center; gap: 8px; white-space: nowrap; }
+    #hl-box.show { display: flex; }
+    #hl-box .hl-name { font-weight: 600; color: #f1f5f9; }
+    #hl-box .hl-time { color: #38bdf8; font-size: 0.64rem; margin-left: 3px; }
+    #hl-box .hl-clear { background: none; border: 1px solid #334155; color: #64748b; cursor: pointer; border-radius: 4px; padding: 2px 7px; font-size: 0.62rem; transition: all 0.15s; }
+    #hl-box .hl-clear:hover { border-color: #94a3b8; color: #94a3b8; }
+
+    .seg-tooltip { background: #0f172a !important; border: 1px solid #334155 !important; border-radius: 6px !important; color: #e2e8f0 !important; padding: 7px 10px !important; font-family: 'Segoe UI', system-ui, sans-serif !important; font-size: 0.67rem !important; line-height: 1.55 !important; box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important; max-width: 240px !important; pointer-events: none !important; }
+    .seg-tooltip::before { display: none !important; }
+    .tt-route { font-weight: 700; font-size: 0.71rem; margin-bottom: 2px; }
+    .tt-time { font-weight: 600; color: #fbbf24; }
+    .tt-notes { color: #94a3b8; font-size: 0.61rem; margin-top: 3px; line-height: 1.4; font-style: italic; }
+
+    .dark-popup .leaflet-popup-content-wrapper { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.55); padding: 0; overflow: hidden; }
+    .dark-popup .leaflet-popup-content { margin: 0; min-width: 250px; max-width: 295px; }
+    .dark-popup .leaflet-popup-tip { background: #1e293b; }
+    .dark-popup .leaflet-popup-close-button { color: #64748b !important; padding: 6px 8px !important; }
+    .popup-head { padding: 9px 13px; border-bottom: 1px solid #334155; }
+    .popup-name { font-size: 0.88rem; font-weight: 700; color: #f8fafc; }
+    .popup-sub { font-size: 0.59rem; color: #64748b; margin-top: 1px; }
+    .popup-body { padding: 8px 13px; }
+    .popup-desc { font-size: 0.65rem; color: #94a3b8; line-height: 1.5; margin-bottom: 6px; }
+    .popup-hl-title { font-size: 0.53rem; color: #f97316; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
+    .popup-tip { margin-top: 6px; padding: 4px 7px; background: #0f172a; border-radius: 4px; font-size: 0.61rem; color: #94a3b8; font-style: italic; line-height: 1.4; }
+    .pop-hl-item { cursor: pointer; padding: 4px 5px; border-radius: 4px; border-bottom: 1px solid #1e2d3e; line-height: 1.4; transition: background 0.12s; display: flex; align-items: flex-start; gap: 5px; }
+    .pop-hl-item:last-child { border-bottom: none; }
+    .pop-hl-item:hover { background: rgba(56,189,248,0.08); }
+    .pop-hl-item.hl-active { background: rgba(56,189,248,0.13); border-left: 2px solid #38bdf8; padding-left: 3px; }
+    .pop-hl-body { flex: 1; }
+    .pop-hl-nm { font-size: 0.65rem; color: #cbd5e1; }
+    .pop-hl-tm { font-size: 0.58rem; color: #475569; margin-top: 1px; }
+    .pop-hl-nt { font-size: 0.56rem; color: #8b5cf6; margin-top: 1px; font-style: italic; }
+
+    #mobile-nav { display: none; width: 100%; flex-shrink: 0; }
+    .mob-tab { flex: 1; background: none; border: none; color: #64748b; font-size: 0.76rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: color 0.15s, background 0.15s; }
+    .mob-tab .mob-icon { font-size: 1.1rem; }
+    .mob-tab.active { color: #06b6d4; background: rgba(6,182,212,0.08); }
+
+    @media (max-width: 768px) {
+      body { flex-direction: column; height: 100dvh; overflow: hidden; }
+      #sidebar { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid #1e293b; display: none; flex: 1; overflow-y: auto; }
+      #sidebar.mob-visible { display: flex; }
+      #map-wrap { flex: 1; min-height: 0; }
+      #map-wrap.mob-hidden { display: none; }
+      #mobile-nav { display: flex; height: calc(50px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid #1e293b; background: #0f172a; }
+      #hl-box { bottom: calc(60px + env(safe-area-inset-bottom)); left: 10px; right: 10px; transform: none; white-space: normal; flex-wrap: wrap; font-size: 0.65rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="header">
+    <h1>🗺 Yucatán & Quintana Roo</h1>
+    <div class="subtitle">Django & Anne · 11 julio – 3 agosto 2026 · 24 noches</div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-cell"><div class="stat-num" style="color:#06b6d4">24</div><div class="stat-lbl">Noches</div></div>
+    <div class="stat-cell"><div class="stat-num" style="color:#94a3b8">3</div><div class="stat-lbl">Bases</div></div>
+    <div class="stat-cell"><div class="stat-num" style="color:#94a3b8">2</div><div class="stat-lbl">Regiones</div></div>
+    <div class="stat-cell"><div class="stat-num" style="color:#94a3b8">~20</div><div class="stat-lbl">Excursiones</div></div>
+  </div>
+
+  <div id="itinerary"></div>
+
+  <div class="section-label">Itinerario Yucatán — Día a Día</div>
+  <div class="timeline-section">
+    <div class="tl-item"><span class="tl-day">19 jul</span><span class="tl-loc">Llegada a <strong>Mérida</strong> — Centro Histórico, Paseo Montejo, Gran Museo Maya</span></div>
+    <div class="tl-item"><span class="tl-day">20 jul</span><span class="tl-loc"><strong>Progreso</strong> (35 km norte) — playa y muelle</span></div>
+    <div class="tl-item"><span class="tl-day">21 jul</span><span class="tl-loc"><strong>Celestún</strong> (93 km oeste) — Ojo de Agua Baldiosera, flamencos rosados</span></div>
+    <div class="tl-item"><span class="tl-day">22 jul</span><span class="tl-loc"><strong>Uxmal</strong> (80 km sur) + Cenote Xcanché contiguo</span></div>
+    <div class="tl-item"><span class="tl-day">23 jul</span><span class="tl-loc"><strong>Izamal</strong> (70 km este) + <strong>San Crisanto</strong> (+30 km, misma ruta)</span></div>
+    <div class="tl-item"><span class="tl-day">24 jul</span><span class="tl-loc">Descanso — mercados y museos de <strong>Mérida</strong></span></div>
+    <div class="tl-item"><span class="tl-day">25 jul</span><span class="tl-loc">Drive a <strong>Valladolid</strong> (160 km) — cenotes Ik Kil y Zací, ciudad colonial 🛏</span></div>
+    <div class="tl-item"><span class="tl-day">26 jul</span><span class="tl-loc"><strong>Chichén Itzá</strong> al amanecer (40 km) → drive a <strong>Cancún</strong> (160 km)</span></div>
+  </div>
+
+  <div class="section-label">Notas de Viaje</div>
+  <div class="tips-section">
+    <div class="tip-item">📍 Clic en cualquier excursión para ver la ruta desde la base en el mapa</div>
+    <div class="tip-item">🔄 Excursiones marcadas como intercambiables pueden hacerse desde Mérida o Cancún</div>
+    <div class="tip-item">🦈 Julio = temporada tiburones ballena en Holbox — reservar con antelación</div>
+    <div class="tip-item">🦩 Celestún: salir antes de las 8h para los flamencos en la reserva</div>
+    <div class="tip-item">🏛 Chichén Itzá: llegar antes de las 9h (calor intenso y grupos desde las 10h)</div>
+    <div class="tip-item">🏨 Mérida: Fiesta Americana · Cancún: Fiesta Americana Villas</div>
+    <div class="tip-item">🚗 Carretera 180D (cuota): ruta más rápida entre Mérida, Valladolid y Cancún</div>
+  </div>
+</div>
+
+<div id="map-wrap">
+  <div id="map"></div>
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Cargando rutas de tránsito…</div>
+  </div>
+  <div id="hl-box">
+    <span id="hl-box-content"></span>
+    <button class="hl-clear" onclick="clearHL()">✕ Cerrar</button>
+  </div>
+</div>
+
+<div id="mobile-nav">
+  <button class="mob-tab active" id="tab-map" onclick="mobView('map')">
+    <span class="mob-icon">🗺</span><span>Mapa</span>
+  </button>
+  <button class="mob-tab" id="tab-itinerary" onclick="mobView('itinerary')">
+    <span class="mob-icon">📋</span><span>Itinerario</span>
+  </button>
+</div>
+
+<script>
+function mobView(view) {
+  if (window.innerWidth > 768) return;
+  const sidebar = document.getElementById('sidebar');
+  const mapWrap = document.getElementById('map-wrap');
+  const tabMap  = document.getElementById('tab-map');
+  const tabIt   = document.getElementById('tab-itinerary');
+  if (view === 'map') {
+    sidebar.classList.remove('mob-visible');
+    mapWrap.classList.remove('mob-hidden');
+    tabMap.classList.add('active');
+    tabIt.classList.remove('active');
+    setTimeout(() => map.invalidateSize(), 50);
+  } else {
+    sidebar.classList.add('mob-visible');
+    mapWrap.classList.add('mob-hidden');
+    tabMap.classList.remove('active');
+    tabIt.classList.add('active');
+  }
+}
+
+const bases = [
+  {
+    num: 1, id: 'pm',
+    name: 'Puerto Morelos', subtitle: 'Quintana Roo',
+    lat: 20.8502, lng: -86.8762, color: '#06b6d4',
+    dateRange: '11–18 jul · 8 noches',
+    hotel: 'Base: Puerto Morelos (máx. 3 alojamientos)',
+    desc: 'Primera parada del viaje. Arrecife coralino protegido, cenotes, Akumal y la costa sur hacia Tulum y Sian Ka\'an.',
+    sleepingPlaces: [
+      { dates: '11–14 jul (4 noches)', where: 'Puerto Morelos', note: 'Arrecife, Akumal, cenotes' },
+      { dates: '15–17 jul (3 noches)', where: 'Tulum',          note: 'Ruinas, Parque del Jaguar, Sian Ka\'an' },
+      { dates: '18 jul (1 noche)',     where: 'Puerto Morelos',  note: 'Antes del drive a Mérida' },
+    ],
+    highlights: [
+      { name: 'Parque Nacional Arrecife Puerto Morelos', time: 'A 5 min en lancha desde la orilla',      lat: 20.8350, lng: -86.8450, overnight: null,                                inter: false },
+      { name: 'Akumal — nado con tortugas marinas',      time: '50 km · ~40 min',                       lat: 20.3946, lng: -87.3157, overnight: null,                                inter: false },
+      { name: 'Cenote Dos Ojos / Jardín del Edén',       time: '55 km · ~45 min',                       lat: 20.3101, lng: -87.3870, overnight: null,                                inter: false },
+      { name: 'Ruinas de Tulum',                         time: '130 km · ~1.5 h',                       lat: 20.2116, lng: -87.4654, overnight: 'Noche en Tulum (15–17 jul)',         inter: false },
+      { name: 'Parque del Jaguar (Tulum)',                time: '130 km · ~1.5 h',                       lat: 20.2141, lng: -87.4589, overnight: 'Noche en Tulum (15–17 jul)',         inter: false },
+      { name: 'Reserva Biosfera Sian Ka\'an',             time: '155 km · ~2 h (30 min desde Tulum)',    lat: 20.0847, lng: -87.5844, overnight: 'Mejor desde Tulum — noche en Tulum', inter: false },
+    ],
+    tip: 'Puerto Morelos es más tranquilo y auténtico que Playa del Carmen. El arrecife del Parque Nacional se puede hacer en snorkel desde la orilla.',
+  },
+  {
+    num: 2, id: 'merida',
+    name: 'Mérida', subtitle: 'Yucatán',
+    lat: 20.9674, lng: -89.5926, color: '#22c55e',
+    dateRange: '19–26 jul · 8 noches',
+    hotel: 'Hotel: Fiesta Americana Mérida',
+    desc: 'Capital cultural del Yucatán. Itinerario optimizado en espiral desde el centro hacia el oeste, sur, norte y este para minimizar distancias. Última noche en Valladolid.',
+    sleepingPlaces: [
+      { dates: '19–24 jul (6 noches)', where: 'Fiesta Americana Mérida',  note: 'Base principal' },
+      { dates: '25 jul (1 noche)',     where: 'Valladolid',               note: 'Cenotes + ciudad colonial' },
+      { dates: '26 jul',              where: '→ Cancún vía Chichén Itzá', note: 'Salida por la mañana' },
+    ],
+    highlights: [
+      { name: 'Centro Histórico — Plaza Grande, Paseo Montejo, Gran Museo Maya', time: 'En ciudad · a pie o taxi',   lat: 20.9673, lng: -89.6234, overnight: null,                                               inter: false },
+      { name: 'Progreso — playa y muelle (6 km)',                               time: '35 km · ~35 min',            lat: 21.2827, lng: -89.6647, overnight: null,                                               inter: false },
+      { name: 'Celestún — Ojo de Agua Baldiosera + flamencos rosados',          time: '93 km · ~1.5 h',             lat: 20.8667, lng: -90.3833, overnight: null,                                               inter: false },
+      { name: 'Uxmal + Cenote Xcanché',                                         time: '80 km · ~1.5 h',             lat: 20.3594, lng: -89.7714, overnight: null,                                               inter: false },
+      { name: 'Izamal — la Ciudad Amarilla',                                    time: '70 km · ~1 h',               lat: 20.9292, lng: -89.0185, overnight: null,                                               inter: true  },
+      { name: 'San Crisanto — manglares y flamencos',                           time: '100 km · ~1.5 h (vía Izamal)',lat: 21.2600, lng: -88.7900, overnight: null,                                               inter: false },
+      { name: 'Chichén Itzá',                                                   time: '120 km · ~1.5 h',            lat: 20.6843, lng: -88.5686, overnight: 'Visitar desde Valladolid el 26 jul al amanecer', inter: true  },
+      { name: 'Valladolid + Cenote Ik Kil + Cenote Zací',                       time: '160 km · ~2 h · 🛏 noche 25 jul', lat: 20.6896, lng: -88.2023, overnight: '1 noche aquí → Chichén Itzá mañana → drive a Cancún', inter: true  },
+    ],
+    tip: 'La noche en Valladolid (25 jul) es la clave: permite ver Chichén Itzá al amanecer el 26 jul y llegar a Cancún en la tarde.',
+  },
+  {
+    num: 3, id: 'cancun',
+    name: 'Cancún', subtitle: 'Quintana Roo',
+    lat: 21.1619, lng: -86.8515, color: '#f97316',
+    dateRange: '27 jul – 3 ago · 8 noches',
+    hotel: 'Hotel: Fiesta Americana Villas Cancún',
+    desc: 'Base final. Excursiones al norte (Holbox, tiburones ballena en julio) y al sur (Xcaret, Cobá). Salida desde el aeropuerto de Cancún el 3 de agosto.',
+    sleepingPlaces: [
+      { dates: '27–28 jul',   where: 'Fiesta Americana Villas Cancún', note: 'Llegada y descanso' },
+      { dates: '28–29 jul (1 noche)', where: 'Isla Holbox',           note: 'Tiburones ballena (temp. julio–ago)' },
+      { dates: '30 jul–3 ago', where: 'Fiesta Americana Villas Cancún', note: 'Xcaret, Isla Mujeres, vuelo 3 ago' },
+    ],
+    highlights: [
+      { name: 'Holbox — tiburones ballena + flamencos',         time: '160 km · ~2 h + ferry',               lat: 21.5246, lng: -87.3774, overnight: '1 noche recomendada (temporada julio–agosto)', inter: false },
+      { name: 'Xcaret — eco-parque',                            time: '75 km · ~1 h sur',                    lat: 20.5808, lng: -87.1261, overnight: null,                                             inter: false },
+      { name: 'Isla Mujeres',                                   time: 'Ferry desde Pto. Juárez · ~30 min',   lat: 21.2337, lng: -86.7301, overnight: null,                                             inter: false },
+      { name: 'Zona Arqueológica El Rey (en Cancún)',           time: 'Zona hotelera · ~20 min',             lat: 21.1128, lng: -86.7686, overnight: null,                                             inter: false },
+      { name: 'Cobá — pirámide escalable',                      time: '160 km · ~2 h sur',                   lat: 20.4943, lng: -87.7232, overnight: null,                                             inter: false },
+      { name: 'Chichén Itzá (desde Cancún)',                    time: '190 km · ~2.5 h — si no se hizo',    lat: 20.6843, lng: -88.5686, overnight: null,                                             inter: true  },
+      { name: 'Valladolid + cenotes (desde Cancún)',            time: '160 km · ~2 h — si no se hizo',      lat: 20.6896, lng: -88.2023, overnight: null,                                             inter: true  },
+      { name: 'Izamal — la Ciudad Amarilla (desde Cancún)',     time: '230 km · ~2.5 h — si no se hizo',    lat: 20.9292, lng: -89.0185, overnight: null,                                             inter: true  },
+    ],
+    tip: 'Julio = temporada tiburones ballena en Holbox. Reservar excursión con al menos 1 semana de anticipación. Xcaret también se recomienda reservar con anticipación.',
+  },
+];
+
+const transits = [
+  {
+    from: 'Puerto Morelos', to: 'Mérida',
+    fromLat: 20.8502, fromLng: -86.8762,
+    toLat: 20.9674, toLng: -89.5926,
+    date: '18–19 jul', km: '~350 km', duration: '~4 h',
+    route: 'Hwy 307 norte → periférico Cancún → Hwy 180D oeste',
+    note: 'Salida temprana. Posible parada en Playa del Carmen para desayuno.',
+  },
+  {
+    from: 'Valladolid', to: 'Cancún',
+    fromLat: 20.6896, fromLng: -88.2023,
+    toLat: 21.1619, toLng: -86.8515,
+    date: '26–27 jul', km: '~160 km', duration: '~2 h',
+    route: 'Hwy 180D este',
+    note: 'Visitar Chichén Itzá (40 km al oeste) en la mañana del 26 jul antes de continuar a Cancún.',
+  },
+];
+
+// Pre-populate _hls registry for all bases
+window._hls = [];
+bases.forEach(base => {
+  base._hlsStart = window._hls.length;
+  base.highlights.forEach(h => {
+    window._hls.push({ baseLat: base.lat, baseLng: base.lng, lat: h.lat, lng: h.lng, name: h.name, time: h.time });
+  });
+});
+
+// Map init
+const map = L.map('map', { center: [20.7, -88.3], zoom: 7 });
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19
+}).addTo(map);
+
+// OSRM routing
+async function fetchRoute(fromLng, fromLat, toLng, toLat) {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+    const r = await fetch(url);
+    const d = await r.json();
+    if (d.code === 'Ok' && d.routes?.[0])
+      return d.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+  } catch(e) {}
+  return null;
+}
+
+// Highlight routes
+let hlLayer = null, hlDest = null;
+
+function clearHL() {
+  if (hlLayer) { map.removeLayer(hlLayer); hlLayer = null; }
+  if (hlDest)  { map.removeLayer(hlDest);  hlDest  = null; }
+  document.querySelectorAll('.pop-hl-item').forEach(e => e.classList.remove('hl-active'));
+  document.getElementById('hl-box').classList.remove('show');
+}
+
+window.showHL = async function(idx) {
+  const { baseLat, baseLng, lat, lng, name, time } = window._hls[idx];
+  document.querySelectorAll('.pop-hl-item').forEach(e => e.classList.remove('hl-active'));
+  const el = document.querySelector(`.pop-hl-item[data-idx="${idx}"]`);
+  if (el) el.classList.add('hl-active');
+  if (hlLayer) { map.removeLayer(hlLayer); hlLayer = null; }
+  if (hlDest)  { map.removeLayer(hlDest);  hlDest  = null; }
+  const box     = document.getElementById('hl-box');
+  const content = document.getElementById('hl-box-content');
+  box.classList.add('show');
+  mobView('map');
+  content.innerHTML = `<span style="color:#64748b;font-style:italic">Cargando ruta a ${name}…</span>`;
+  const coords = await fetchRoute(baseLng, baseLat, lng, lat);
+  if (coords) {
+    hlLayer = L.polyline(coords, { color: '#38bdf8', weight: 4, opacity: 0.95 }).addTo(map);
+    hlDest  = L.marker([lat, lng], { icon: L.divIcon({ className: '',
+      html: `<div style="width:20px;height:20px;background:#38bdf8;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#0f172a;box-shadow:0 2px 8px rgba(0,0,0,0.5)">★</div>`,
+      iconSize: [20, 20], iconAnchor: [10, 10] }) }).addTo(map);
+    content.innerHTML = `<span class="hl-name">${name}</span><span class="hl-time">${time}</span>`;
+    map.fitBounds(hlLayer.getBounds(), { padding: [60, 60] });
+  } else {
+    content.innerHTML = `<span style="color:#f87171">No se pudo cargar la ruta a ${name}</span>`;
+  }
+};
+
+// Marker icons
+function markerIcon(num, color) {
+  return L.divIcon({ className: '',
+    html: `<div style="width:26px;height:26px;background:${color};border:2.5px solid rgba(255,255,255,0.85);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.62rem;font-weight:700;color:white;box-shadow:0 2px 10px rgba(0,0,0,0.45);font-family:system-ui,sans-serif">${num}</div>`,
+    iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -16] });
+}
+
+// Build popup HTML
+function buildPopup(base) {
+  const hlsHtml = base.highlights.map((h, hi) => {
+    const idx = base._hlsStart + hi;
+    const inter = h.inter ? `<span class="badge badge-inter">🔄</span>` : '';
+    const night = h.overnight ? `<div class="pop-hl-nt">🛏 ${h.overnight}</div>` : '';
+    return `<div class="pop-hl-item" data-idx="${idx}" onclick="showHL(${idx})">
+      <span style="color:#334155;font-size:0.58rem;margin-top:2px">›</span>
+      <div class="pop-hl-body">
+        <div class="pop-hl-nm">${h.name}${inter}</div>
+        <div class="pop-hl-tm">${h.time}</div>
+        ${night}
+      </div></div>`;
+  }).join('');
+  return `
+    <div class="popup-head" style="border-left:4px solid ${base.color}">
+      <div class="popup-name">${base.name}</div>
+      <div class="popup-sub">${base.subtitle} · ${base.dateRange}</div>
+    </div>
+    <div class="popup-body">
+      <div class="popup-desc">${base.desc}</div>
+      <div class="popup-hl-title">Excursiones — clic para ver ruta ↓</div>
+      ${hlsHtml}
+      <div class="popup-tip">${base.tip}</div>
+    </div>`;
+}
+
+// Add base markers
+const markers = bases.map(base => {
+  const m = L.marker([base.lat, base.lng], { icon: markerIcon(base.num, base.color) })
+    .bindPopup(buildPopup(base), { className: 'dark-popup', maxWidth: 300 });
+  m.on('click', () => clearHL());
+  return m.addTo(map);
+});
+
+// Load transit routes
+async function loadTransits() {
+  const promises = transits.map(async t => {
+    const coords = await fetchRoute(t.fromLng, t.fromLat, t.toLng, t.toLat);
+    const lineCoords = coords || [[t.fromLat, t.fromLng], [t.toLat, t.toLng]];
+    const line = L.polyline(lineCoords, { color: '#475569', weight: 3, opacity: 0.55, dashArray: '10 6' });
+    line.bindTooltip(
+      `<div class="tt-route" style="color:#94a3b8">${t.from} → ${t.to}</div>
+       <div><span class="tt-time">${t.duration}</span> · ${t.km} · ${t.date}</div>
+       <div class="tt-notes">${t.note}</div>`,
+      { className: 'seg-tooltip', sticky: true, direction: 'top', offset: [0, -6] }
+    );
+    line.addTo(map);
+  });
+  await Promise.all(promises);
+  const ov = document.getElementById('loading-overlay');
+  ov.classList.add('hidden');
+  setTimeout(() => { ov.style.display = 'none'; }, 500);
+}
+loadTransits();
+
+// Build sidebar
+function hexToRgb(hex) {
+  return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)].join(',');
+}
+
+const regionLabels = ['🌊 QUINTANA ROO (RIVIERA MAYA)', '🌿 YUCATÁN', '🌴 QUINTANA ROO (CANCÚN)'];
+const itinerary = document.getElementById('itinerary');
+
+bases.forEach((base, bi) => {
+  // Region header
+  const rh = document.createElement('div');
+  rh.className = 'region-header';
+  rh.style.cssText = `color:${base.color};border-left:3px solid ${base.color};background:rgba(${hexToRgb(base.color)},0.05)`;
+  rh.innerHTML = `<span>${regionLabels[bi]}</span><span style="color:#475569;font-weight:400;font-size:0.58rem">${base.dateRange}</span>`;
+  itinerary.appendChild(rh);
+
+  // Base card
+  const card = document.createElement('div');
+  card.className = 'base-card';
+  card.innerHTML = `
+    <div class="base-name">
+      <div class="base-num" style="background:${base.color}">${base.num}</div>
+      ${base.name}
+    </div>
+    <div class="base-hotel">${base.hotel}</div>
+    <div class="base-dates">${base.dateRange}</div>
+    <div class="base-desc">${base.desc}</div>`;
+  card.addEventListener('click', () => {
+    clearHL();
+    map.setView([base.lat, base.lng], 9, { animate: true });
+    markers[bi].openPopup();
+    mobView('map');
+  });
+  itinerary.appendChild(card);
+
+  // Sleeping places
+  const sp = document.createElement('div');
+  sp.className = 'sleep-section';
+  sp.innerHTML = `<div class="sleep-title">🛏 Alojamientos sugeridos</div>` +
+    base.sleepingPlaces.map(s =>
+      `<div class="sleep-item">
+         <span class="sleep-dates">${s.dates}</span>
+         <span><span class="sleep-where">${s.where}</span> <span style="color:#475569">— ${s.note}</span></span>
+       </div>`
+    ).join('');
+  itinerary.appendChild(sp);
+
+  // Highlights
+  base.highlights.forEach((h, hi) => {
+    const idx = base._hlsStart + hi;
+    const row = document.createElement('div');
+    row.className = 'hl-row';
+    const inter = h.inter ? `<span class="badge badge-inter">🔄</span>` : '';
+    const night = h.overnight ? `<span class="badge badge-night">🛏</span>` : '';
+    row.innerHTML = `
+      <div class="hl-num" style="background:${base.color}">${hi + 1}</div>
+      <div class="hl-content">
+        <div class="hl-name-text">${h.name}${inter}${night}</div>
+        <div class="hl-time-text">${h.time}</div>
+        ${h.overnight ? `<div class="hl-note-text">${h.overnight}</div>` : ''}
+      </div>`;
+    row.style.borderLeftColor = base.color;
+    row.addEventListener('click', () => {
+      document.querySelectorAll('.hl-row').forEach(r => r.classList.remove('active'));
+      row.classList.add('active');
+      showHL(idx);
+    });
+    itinerary.appendChild(row);
+  });
+
+  // Transit row after bases 1 and 2
+  if (bi < transits.length) {
+    const t = transits[bi];
+    const tr = document.createElement('div');
+    tr.className = 'transit-row';
+    tr.innerHTML = `
+      <div class="transit-line"></div>
+      <div class="transit-info">
+        <strong>🚗 ${t.from} → ${t.to}</strong> · ${t.date}<br>
+        ${t.km} · ${t.duration} · <span style="color:#374151">${t.route}</span>
+      </div>`;
+    itinerary.appendChild(tr);
+  }
+});
+</script>
+</body>
+</html>
